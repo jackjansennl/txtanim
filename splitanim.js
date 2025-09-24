@@ -49,7 +49,6 @@ var Xe = class {
     }
 };
 
-// MODIFIED: This is the updated animation class with ARIA attributes
 var Xi = class extends Xe {
     constructor(t) {
         let e = {
@@ -71,19 +70,10 @@ var Xi = class extends Xe {
         this.config = e, this.item = t;
 
         // --- ACCESSIBILITY IMPLEMENTATION ---
-        
-        // NEW: 1. Get the original text content *before* splitting.
         const originalText = t.textContent;
-        
-        // NEW: 2. Set the `aria-label` on the parent element for screen readers.
         t.setAttribute('aria-label', originalText);
-
-        // This next line splits the text into divs
         this.animated = xo(t); 
-        
-        // NEW: 3. Hide all the newly created child divs from screen readers.
         this.animated.forEach(el => el.setAttribute('aria-hidden', 'true'));
-        
         // --- END ACCESSIBILITY IMPLEMENTATION ---
 
         this.a = {
@@ -113,28 +103,43 @@ var Xi = class extends Xe {
     }
 };
 
-// MODIFIED: This is the updated main controller with the `prefers-reduced-motion` check
+// MODIFIED: This is the updated main controller class
 var qi = class {
     constructor(t) {
         this.selector = t;
-        this.reference = [...document.querySelectorAll(`[${t}]`)];
+        this.bypassAttribute = 'data-reduced-motion'; // The attribute to bypass the motion setting
+        this.elements = [...document.querySelectorAll(`[${t}]`)];
         
-        // NEW: Check if the user has requested reduced motion.
+        // NEW: Check for the user's motion preference
         this.motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-        if (this.reference && this.reference.length > 0) {
+        if (this.elements && this.elements.length > 0) {
             this.injectCss();
             this.init();
         }
     }
     
     init() {
-        // NEW: If the user prefers reduced motion, skip all the animation setup.
+        let elementsToAnimate = this.elements;
+
+        // NEW: Check if the user prefers reduced motion
         if (this.motionQuery.matches) {
-            console.log("Reduced motion enabled. Text animations skipped for accessibility.");
-            return;
+            console.log("Reduced motion is preferred by the user.");
+            
+            // NEW: Filter the elements, keeping only those with the bypass attribute set to "off"
+            elementsToAnimate = this.elements.filter(el => {
+                return el.getAttribute(this.bypassAttribute) === 'off';
+            });
+
+            if (elementsToAnimate.length === 0) {
+                console.log("Stagger text animations skipped for accessibility.");
+                return; // Exit completely if no elements need to be animated
+            }
+             console.log(`${elementsToAnimate.length} element(s) have a bypass and will be animated.`);
         }
-        this.animations = this.reference.map(t => new Xi(t));
+        
+        // The map now runs on the original list or the filtered list of elements
+        this.animations = elementsToAnimate.map(t => new Xi(t));
     }
     
     injectCss() {
@@ -148,7 +153,6 @@ var qi = class {
     }
 };
 
-// This is the original initialization code (no changes needed here)
 window.staggerText = new qi("data-a-split");
 
 function xo(o) {
